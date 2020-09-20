@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
+
+	"github.com/gorilla/mux"
 
 	"github.com/dung997bn/bookstore_utils-go/resterrors"
 
 	"github.com/dung997bn/bookstore_items_api/domain/items"
+	"github.com/dung997bn/bookstore_items_api/domain/queries"
 	"github.com/dung997bn/bookstore_items_api/services"
 	"github.com/dung997bn/bookstore_items_api/utils/httputils"
 	"github.com/dung997bn/bookstore_oauth-go/oauth"
@@ -21,7 +25,8 @@ var (
 
 type itemsControllerInterface interface {
 	Create(w http.ResponseWriter, r *http.Request)
-	Get(w http.ResponseWriter, r *http.Request)
+	GetByID(w http.ResponseWriter, r *http.Request)
+	Search(w http.ResponseWriter, r *http.Request)
 }
 
 type itemsController struct{}
@@ -35,14 +40,14 @@ func (i *itemsController) Create(w http.ResponseWriter, r *http.Request) {
 
 	sellerID := oauth.GetCallerID(r)
 	if sellerID == 0 {
-		respErr := resterrors.NewUnauthorizedError("invalid reques body")
+		respErr := resterrors.NewUnauthorizedError("invalid access_token")
 		httputils.ResponseError(w, respErr)
 		return
 	}
 
 	requestBody, errBody := ioutil.ReadAll(r.Body)
 	if errBody != nil {
-		respErr := resterrors.NewBadRequestError("invalid reques body")
+		respErr := resterrors.NewBadRequestError("invalid request body")
 		httputils.ResponseError(w, respErr)
 		return
 	}
@@ -68,6 +73,38 @@ func (i *itemsController) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 //Get func
-func (i *itemsController) Get(w http.ResponseWriter, r *http.Request) {
+func (i *itemsController) GetByID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	fmt.Println(vars)
+	itemID := strings.TrimSpace(vars["id"])
+	item, err := services.ItemsService.GetByID(itemID)
+	if err != nil {
+		httputils.ResponseError(w, err)
+	}
+	httputils.ResponseJSON(w, http.StatusOK, item)
+}
 
+func (i *itemsController) Search(w http.ResponseWriter, r *http.Request) {
+
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		apiErr := resterrors.NewBadRequestError("invalid json body")
+		httputils.ResponseError(w, apiErr)
+		return
+	}
+	defer r.Body.Close()
+
+	var query queries.EsQuery
+	if err := json.Unmarshal(bytes, &query); err != nil {
+		apiErr := resterrors.NewBadRequestError("invalid json body")
+		httputils.ResponseError(w, apiErr)
+		return
+	}
+
+	items, searchErr := services.ItemsService.Search(query)
+	if searchErr != nil {
+		httputils.ResponseError(w, searchErr)
+		return
+	}
+	httputils.ResponseJSON(w, http.StatusOK, items)
 }

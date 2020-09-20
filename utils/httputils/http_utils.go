@@ -15,6 +15,6 @@ func ResponseJSON(w http.ResponseWriter, statusCode int, body interface{}) {
 }
 
 //ResponseError func common
-func ResponseError(w http.ResponseWriter, err *resterrors.RestErr) {
-	ResponseJSON(w, err.Status, err)
+func ResponseError(w http.ResponseWriter, err resterrors.RestErr) {
+	ResponseJSON(w, err.Status(), err)
 }
