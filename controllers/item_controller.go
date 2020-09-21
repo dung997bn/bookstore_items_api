@@ -27,6 +27,8 @@ type itemsControllerInterface interface {
 	Create(w http.ResponseWriter, r *http.Request)
 	GetByID(w http.ResponseWriter, r *http.Request)
 	Search(w http.ResponseWriter, r *http.Request)
+	Update(w http.ResponseWriter, r *http.Request)
+	Delete(w http.ResponseWriter, r *http.Request)
 }
 
 type itemsController struct{}
@@ -72,10 +74,8 @@ func (i *itemsController) Create(w http.ResponseWriter, r *http.Request) {
 	httputils.ResponseJSON(w, http.StatusCreated, result)
 }
 
-//Get func
 func (i *itemsController) GetByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	fmt.Println(vars)
 	itemID := strings.TrimSpace(vars["id"])
 	item, err := services.ItemsService.GetByID(itemID)
 	if err != nil {
@@ -107,4 +107,58 @@ func (i *itemsController) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputils.ResponseJSON(w, http.StatusOK, items)
+}
+
+func (i *itemsController) Delete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	itemID := strings.TrimSpace(vars["id"])
+	item, err := services.ItemsService.Delete(itemID)
+	if err != nil {
+		httputils.ResponseError(w, err)
+	}
+	httputils.ResponseJSON(w, http.StatusOK, item)
+}
+
+//Create func
+func (i *itemsController) Update(w http.ResponseWriter, r *http.Request) {
+	// if errOauth := oauth.AuthenticateRequest(r); errOauth != nil {
+	// 	httputils.ResponseError(w, errOauth)
+	// 	return
+	// }
+
+	// sellerID := oauth.GetCallerID(r)
+	// if sellerID == 0 {
+	// 	respErr := resterrors.NewUnauthorizedError("invalid access_token")
+	// 	httputils.ResponseError(w, respErr)
+	// 	return
+	// }
+
+	vars := mux.Vars(r)
+	itemID := strings.TrimSpace(vars["id"])
+
+	requestBody, errBody := ioutil.ReadAll(r.Body)
+	if errBody != nil {
+		respErr := resterrors.NewBadRequestError("invalid request body")
+		httputils.ResponseError(w, respErr)
+		return
+	}
+
+	defer r.Body.Close()
+
+	var itemRequest items.Item
+	if err := json.Unmarshal(requestBody, &itemRequest); err != nil {
+		respErr := resterrors.NewBadRequestError("invalid reques body")
+		httputils.ResponseError(w, respErr)
+		return
+	}
+
+	// itemRequest.Seller = sellerID
+	itemRequest.ID = itemID
+
+	result, createErr := services.ItemsService.Update(&itemRequest)
+	if createErr != nil {
+		httputils.ResponseError(w, createErr)
+		return
+	}
+	httputils.ResponseJSON(w, http.StatusCreated, result)
 }

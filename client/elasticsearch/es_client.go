@@ -7,7 +7,7 @@ import (
 
 	"github.com/dung997bn/bookstore_utils-go/logger"
 
-	"github.com/olivere/elastic"
+	"gopkg.in/olivere/elastic.v6"
 )
 
 var (
@@ -19,7 +19,9 @@ type esClientInterface interface {
 	setClient(*elastic.Client)
 	Index(string, string, interface{}) (*elastic.IndexResponse, error)
 	GetByID(string, string, string) (*elastic.GetResult, error)
-	Search(string, elastic.Query) (*elastic.SearchResult, error)
+	Search(string, string, elastic.Query) (*elastic.SearchResult, error)
+	Delete(string, string, string) (*elastic.DeleteResponse, error)
+	Update(string, string, string, map[string]interface{}) (*elastic.GetResult, error)
 }
 
 type esClient struct {
@@ -78,11 +80,12 @@ func (e *esClient) GetByID(index string, docType string, ID string) (*elastic.Ge
 	return result, nil
 }
 
-func (e *esClient) Search(index string, query elastic.Query) (*elastic.SearchResult, error) {
+func (e *esClient) Search(index string, docType string, query elastic.Query) (*elastic.SearchResult, error) {
 	ctx := context.Background()
 	result, err := e.client.Search(index).
 		Index(index). // search in index "twitter"
 		Query(query). // specify the query
+		Type(docType).
 		//Sort("user", true). // sort by "user" field, ascending
 
 		//Pretty(true).       // pretty print request and response JSON
@@ -93,4 +96,32 @@ func (e *esClient) Search(index string, query elastic.Query) (*elastic.SearchRes
 		return nil, err
 	}
 	return result, nil
+}
+
+func (e *esClient) Delete(index string, docType string, itemID string) (*elastic.DeleteResponse, error) {
+	ctx := context.Background()
+	result, err := e.client.Delete().
+		Index(index).
+		Type(docType).
+		Id(itemID).
+		Do(ctx)
+	if err != nil {
+		logger.Error(fmt.Sprintf("error when trying to delete docoment with id %s", itemID), err)
+		return nil, err
+	}
+	return result, err
+}
+
+func (e *esClient) Update(index string, docType string, itemID string, updateBody map[string]interface{}) (*elastic.GetResult, error) {
+	ctx := context.Background()
+	update, err := e.client.Update().Index(index).Type(docType).Id(itemID).
+		Doc(updateBody).
+		Do(ctx)
+	if err != nil {
+		logger.Error(fmt.Sprintf("error when trying to update docoment with id %s", itemID), err)
+	}
+	if update.Result != "updated" {
+		logger.Error(fmt.Sprintf("error when trying to update docoment with id %s", itemID), err)
+	}
+	return e.GetByID(index, docType, itemID)
 }

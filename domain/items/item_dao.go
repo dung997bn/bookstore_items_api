@@ -12,7 +12,7 @@ import (
 
 const (
 	indexItems  = "items"
-	docTypeItem = "items"
+	docTypeItem = "_doc"
 )
 
 //Save func
@@ -50,19 +50,23 @@ func (i *Item) GetByID() resterrors.RestErr {
 //Search func
 func (i *Item) Search(query queries.EsQuery) ([]Item, resterrors.RestErr) {
 
-	resultQuery, err := elasticsearch.Client.Search(indexItems, query.Build())
+	resultQuery, err := elasticsearch.Client.Search(indexItems, docTypeItem, query.Build())
 	if err != nil {
 		return nil, resterrors.NewInternalServerError("error when trying to search documents", errors.New("database error"))
 	}
 
 	result := make([]Item, 0)
-	if resultQuery.Hits.TotalHits.Value > 0 {
-		fmt.Printf("Found a total of %d tweets\n", resultQuery.Hits.TotalHits.Value)
+	if resultQuery.Hits.TotalHits > 0 {
+		fmt.Printf("Found a total of %d tweets\n", resultQuery.Hits.TotalHits)
 
 		for _, hit := range resultQuery.Hits.Hits {
 			// Deserialize hit.Source into a Item (could also be just a map[string]interface{}).
 			var i Item
-			if err := json.Unmarshal(hit.Source, &i); err != nil {
+			bytes, err := hit.Source.MarshalJSON()
+			if err != nil {
+				return nil, resterrors.NewInternalServerError("error when trying to MarshalJSON documents", errors.New("database error"))
+			}
+			if err := json.Unmarshal(bytes, &i); err != nil {
 				return nil, resterrors.NewInternalServerError("error when trying to Deserialize documents", errors.New("database error"))
 			}
 			i.ID = hit.Id
@@ -70,10 +74,47 @@ func (i *Item) Search(query queries.EsQuery) ([]Item, resterrors.RestErr) {
 		}
 	} else {
 		// No hits
-		return nil, resterrors.NewNotFoundError("no items found matching given condirion")
+		return nil, resterrors.NewNotFoundError("no items found matching given condition")
 	}
 	if len(result) == 0 {
-		return nil, resterrors.NewNotFoundError("no items found matching given condirion")
+		return nil, resterrors.NewNotFoundError("no items found matching given condition")
 	}
 	return result, nil
+}
+
+//Delete fun
+func (i *Item) Delete() (string, resterrors.RestErr) {
+	if err := i.GetByID(); err != nil {
+		return "", resterrors.NewNotFoundError("no items found matching given condition")
+	}
+	result, err := elasticsearch.Client.Delete(indexItems, docTypeItem, i.ID)
+	if err != nil {
+		return "", resterrors.NewInternalServerError(fmt.Sprintf("error when trying to delete document with id: %s", i.ID), errors.New("database error"))
+	}
+	if result.Result != "deleted" {
+		return "", resterrors.NewInternalServerError(fmt.Sprintf("error when trying to delete document with id: %s", i.ID), errors.New("database error"))
+	}
+	return result.Result, nil
+}
+
+//Update func
+func (i *Item) Update(updateBody *Item) resterrors.RestErr {
+	if err := i.GetByID(); err != nil {
+		return resterrors.NewNotFoundError("no items found matching given condition")
+	}
+	body := MakeUpdateBody(i, updateBody)
+	result, err := elasticsearch.Client.Update(indexItems, docTypeItem, i.ID, body)
+
+	if err != nil {
+		return resterrors.NewInternalServerError(fmt.Sprintf("error when trying to update document with id: %s", i.ID), errors.New("database error"))
+	}
+
+	bytes, err := result.Source.MarshalJSON()
+	if err != nil {
+		return resterrors.NewInternalServerError("error when trying to parse json from result", errors.New("database error"))
+	}
+	if err := json.Unmarshal(bytes, &i); err != nil {
+		return resterrors.NewInternalServerError("error when trying to parse json from result", errors.New("database error"))
+	}
+	return nil
 }
