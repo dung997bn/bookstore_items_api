@@ -1,5 +1,7 @@
 package items
 
+import "fmt"
+
 //Item type
 type Item struct {
 	ID                string      `json:"id"`
@@ -22,9 +24,11 @@ type Description struct {
 
 //Picture type
 type Picture struct {
-	ID  int64  `json:"id"`
-	URL string `json:"url"`
+	PicID int64  `json:"pic_id"`
+	URL   string `json:"url"`
 }
+
+type pictureUpdate map[string]interface{}
 
 //MakeUpdateBody func
 func MakeUpdateBody(itemOld *Item, itemNew *Item) map[string]interface{} {
@@ -37,15 +41,28 @@ func MakeUpdateBody(itemOld *Item, itemNew *Item) map[string]interface{} {
 	}
 
 	//Description
-	if itemOld.Description.PlainText != itemNew.Description.PlainText && itemNew.Description.PlainText != "" {
-		body["description"] = itemNew.Description.PlainText
+	if itemOld.Description.PlainText != itemNew.Description.PlainText && itemNew.Description.PlainText != "" &&
+		itemOld.Description.HTML != itemNew.Description.HTML && itemNew.Description.HTML != "" {
+		descrip := make(map[string]interface{})
+		descrip["plain_text"] = itemNew.Description.PlainText
+		descrip["html"] = itemNew.Description.HTML
+		body["description"] = descrip
+
 	}
-	if itemOld.Description.HTML != itemNew.Description.HTML && itemNew.Description.HTML != "" {
-		body["description"] = itemNew.Description.PlainText
+
+	if itemNew.Pictures != nil {
+		pics := make([]pictureUpdate, 0)
+		for i, p := range itemNew.Pictures {
+
+			if p.PicID != 0 && p.URL != "" {
+				pic := pictureUpdate{"id": p.PicID, "url": p.URL}
+				pics = append(pics, pic)
+				_ = i
+				fmt.Println(pic)
+			}
+		}
+		body["pictures"] = pics
 	}
-	// if itemOld.Pictures != itemNew.Seller && itemNew.Seller != 0 {
-	// 	body["seller"] = itemNew
-	// }
 	if itemOld.Video != itemNew.Video && itemNew.Video != "" {
 		body["video"] = itemNew.Video
 	}

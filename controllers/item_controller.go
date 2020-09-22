@@ -121,17 +121,17 @@ func (i *itemsController) Delete(w http.ResponseWriter, r *http.Request) {
 
 //Create func
 func (i *itemsController) Update(w http.ResponseWriter, r *http.Request) {
-	// if errOauth := oauth.AuthenticateRequest(r); errOauth != nil {
-	// 	httputils.ResponseError(w, errOauth)
-	// 	return
-	// }
+	if errOauth := oauth.AuthenticateRequest(r); errOauth != nil {
+		httputils.ResponseError(w, errOauth)
+		return
+	}
 
-	// sellerID := oauth.GetCallerID(r)
-	// if sellerID == 0 {
-	// 	respErr := resterrors.NewUnauthorizedError("invalid access_token")
-	// 	httputils.ResponseError(w, respErr)
-	// 	return
-	// }
+	sellerID := oauth.GetCallerID(r)
+	if sellerID == 0 {
+		respErr := resterrors.NewUnauthorizedError("invalid access_token")
+		httputils.ResponseError(w, respErr)
+		return
+	}
 
 	vars := mux.Vars(r)
 	itemID := strings.TrimSpace(vars["id"])
@@ -152,7 +152,7 @@ func (i *itemsController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// itemRequest.Seller = sellerID
+	itemRequest.Seller = sellerID
 	itemRequest.ID = itemID
 
 	result, createErr := services.ItemsService.Update(&itemRequest)
