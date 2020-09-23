@@ -11,10 +11,10 @@ import (
 
 	"github.com/dung997bn/bookstore_utils-go/resterrors"
 
-	"github.com/dung997bn/bookstore_items_api/domain/items"
-	"github.com/dung997bn/bookstore_items_api/domain/queries"
-	"github.com/dung997bn/bookstore_items_api/services"
-	"github.com/dung997bn/bookstore_items_api/utils/httputils"
+	"github.com/dung997bn/bookstore_items_api/src/domain/items"
+	"github.com/dung997bn/bookstore_items_api/src/domain/queries"
+	"github.com/dung997bn/bookstore_items_api/src/services"
+	"github.com/dung997bn/bookstore_items_api/src/utils/httputils"
 	"github.com/dung997bn/bookstore_oauth-go/oauth"
 )
 

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/dung997bn/bookstore_items_api/app"
+	"github.com/dung997bn/bookstore_items_api/src/app"
 )
 
 func main() {

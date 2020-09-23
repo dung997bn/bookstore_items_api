@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dung997bn/bookstore_items_api/client/elasticsearch"
+	"github.com/dung997bn/bookstore_items_api/src/client/elasticsearch"
 	"github.com/gorilla/mux"
 )
 

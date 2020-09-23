@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dung997bn/bookstore_items_api/client/elasticsearch"
-	"github.com/dung997bn/bookstore_items_api/domain/queries"
+	"github.com/dung997bn/bookstore_items_api/src/client/elasticsearch"
+	"github.com/dung997bn/bookstore_items_api/src/domain/queries"
 	"github.com/dung997bn/bookstore_utils-go/resterrors"
 )
 
